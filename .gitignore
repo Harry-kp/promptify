@@ -47,3 +47,5 @@ coverage.out
 
 # Local environment files
 .env
+
+dist/

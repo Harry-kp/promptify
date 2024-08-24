@@ -70,6 +70,7 @@ func readIgnoreFiles(dir string) (map[string]bool, error) {
 	ignoreFiles := []string{".gitignore", ".promptignore"}
 	ignorePatterns := make(map[string]bool)
 	ignorePatterns[".promptignore"] = true // Always ignore .promptignore file
+	ignorePatterns[".gitignore"] = true
 	for _, ignoreFile := range ignoreFiles {
 		filePath := filepath.Join(dir, ignoreFile)
 		if _, err := os.Stat(filePath); err == nil {
