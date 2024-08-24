@@ -2,6 +2,15 @@
 
 This project provides a utility to flatten the structure of a large project by consolidating the contents of multiple text files into a single output file. The output file is organized in a way that each section corresponds to the content of a specific file within the project, making it easier to process and analyze the data.
 
+### Use this as AI Model Prompting
+
+Developers often face challenges when prompting AI models for their projects because most AI models do not support direct directory structures. Even if some AI models support this feature, they often charge money for it. Additionally, developers frequently need to reference multiple files to ask a question or solve a problem, which can be cumbersome.
+This utility addresses these issues by:
+
+- **Consolidating Multiple Files**: By combining multiple text files into a single output file, developers can easily prompt AI models without worrying about directory structures.
+- **Cost-Effective Solution**: Since a single text file is supported by any AI model, this utility provides a cost-effective solution for developers.
+- **Comprehensive Context**: Including the relative path of each file in the output ensures that the AI model has the necessary context to understand the relationship between different files, improving the accuracy of responses.
+
 ## Caution
 
 - **Large Directories**: Avoid running this script on very large directories as it may consume significant resources and take a long time to complete.
@@ -64,18 +73,6 @@ Content of file 2...
 -------------------------------subdir/file3.txt-------------------------------
 Content of file 3...
 ```
-
-## Problem Solved
-
-### AI Model Prompting
-
-Developers often face challenges when prompting AI models for their projects because most AI models do not support direct directory structures. Even if some AI models support this feature, they often charge money for it. Additionally, developers frequently need to reference multiple files to ask a question or solve a problem, which can be cumbersome.
-
-This utility addresses these issues by:
-
-- **Consolidating Multiple Files**: By combining multiple text files into a single output file, developers can easily prompt AI models without worrying about directory structures.
-- **Cost-Effective Solution**: Since a single text file is supported by any AI model, this utility provides a cost-effective solution for developers.
-- **Comprehensive Context**: Including the relative path of each file in the output ensures that the AI model has the necessary context to understand the relationship between different files, improving the accuracy of responses.
 
 ## Installation
 
