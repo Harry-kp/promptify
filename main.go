@@ -1,0 +1,170 @@
+package main
+
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+func addPrompt(outputFile *os.File) {
+	prompt := `
+
+	This file contains a flattened structure of a large project. Your task is to memorize the entire content of this file and use it to answer any questions based on the information provided herein.
+
+	The file is organized in sections, where each section corresponds to the content of a specific file within the project. Each section begins with a line indicating the file path, formatted as:
+	------ FILE PATH ------
+	This line is followed by the actual content of the file. The section ends when the next file path line is encountered, which marks the beginning of a new file's content.
+
+	The relative path of each file is included for reference, allowing you to trace back the content to its original location within the project structure. This organization helps in maintaining clarity and context, making it easier for you to navigate through the combined content of multiple files.
+
+	Your objective is to:
+	1. Memorize the entire content of this file.
+	2. Use the memorized content to accurately answer any questions based on the information provided.
+
+	Example format:
+	------
+	path/to/file1.txt
+	Content of file 1...
+	------
+	path/to/file2.txt
+	Content of file 2...
+	------
+
+	Please proceed by memorizing the content and be prepared to answer questions based on it.`
+	outputFile.WriteString(prompt)
+	outputFile.WriteString("\n\n")
+}
+
+// isTextFile checks if a file is a plain text file by reading its content
+func isTextFile(filename string) bool {
+	file, err := os.Open(filename)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	// Read the first 512 bytes to determine if the file is binary
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		return false
+	}
+
+	// Check if the file contains any null bytes, which are uncommon in text files
+	for i := 0; i < n; i++ {
+		if buffer[i] == 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+// readIgnoreFiles reads and combines the contents of .gitignore and .promptignore files
+func readIgnoreFiles(dir string) (map[string]bool, error) {
+	ignoreFiles := []string{".gitignore", ".promptignore"}
+	ignorePatterns := make(map[string]bool)
+	ignorePatterns[".promptignore"] = true // Always ignore .promptignore file
+	for _, ignoreFile := range ignoreFiles {
+		filePath := filepath.Join(dir, ignoreFile)
+		if _, err := os.Stat(filePath); err == nil {
+			file, err := os.Open(filePath)
+			if err != nil {
+				return nil, err
+			}
+			defer file.Close()
+
+			scanner := bufio.NewScanner(file)
+			for scanner.Scan() {
+				line := scanner.Text()
+				if line != "" && !strings.HasPrefix(line, "#") {
+					ignorePatterns[line] = true
+				}
+			}
+
+			if err := scanner.Err(); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return ignorePatterns, nil
+}
+
+// isIgnored checks if a file path matches any ignore patterns
+func isIgnored(path string, ignorePatterns map[string]bool) bool {
+	for pattern := range ignorePatterns {
+		if strings.Contains(path, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// processDirectory processes the directory and writes the content of text files to an output file
+func processDirectory(dir string, ignorePatterns map[string]bool, outputFileName string) error {
+	outputFile, err := os.Create(outputFileName)
+	addPrompt(outputFile)
+	if err != nil {
+		return err
+	}
+	defer outputFile.Close()
+
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && isTextFile(path) && !isIgnored(path, ignorePatterns) && path != outputFileName {
+			content, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			relativePath, err := filepath.Rel(dir, path)
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprintf(outputFile, "-----------------------------------------%s-----------------------------------------\n%s\n", relativePath, content)
+		}
+
+		return nil
+	})
+
+	return nil
+}
+
+func main() {
+	dir := flag.String("dir", ".", "Directory path to process")
+	ignorePatterns, err := readIgnoreFiles(*dir)
+	if err != nil {
+		fmt.Printf("Error reading ignore files: %v\n", err)
+		os.Exit(1)
+	}
+	flag.Parse()
+	var outputFileName string
+	if *dir == "." {
+		currentDir, err := os.Getwd()
+		if err != nil {
+			fmt.Printf("Error getting current directory: %v\n", err)
+			os.Exit(1)
+		}
+		outputFileName = filepath.Base(currentDir) + ".txt"
+	} else {
+		outputFileName = filepath.Base(*dir) + ".txt"
+	}
+
+	err = processDirectory(*dir, ignorePatterns, outputFileName)
+	if err != nil {
+		fmt.Printf("Error processing directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Processed directory and wrote output to %s\n", outputFileName)
+}
